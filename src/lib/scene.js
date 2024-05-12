@@ -94,6 +94,14 @@ export async function scene(node, websceneid) {
       },
     });
 
+        const connector = document.getElementsByTagName(
+      "geocam-viewer-arcgis-scene"
+    )[0];
+    if (connector && connector.link) {
+      console.log("map linking to connector", view);
+      connector.link(view);
+    }
+
     const destructureLayers = function (obj) {
       return obj.layers.items.map((l) => {
         return l.layers ? destructureLayers(l) : l;
