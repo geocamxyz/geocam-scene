@@ -49,6 +49,7 @@ export async function scene(node, websceneid) {
 
   await loadModules(
     [
+      "esri/identity/IdentityManager",
       "esri/WebScene",
       "esri/views/SceneView",
       "esri/widgets/Expand",
@@ -57,135 +58,163 @@ export async function scene(node, websceneid) {
       .concat(widgetList)
       .concat(expandList),
     esriLoaderOptions
-  ).then(([WebScene, SceneView, Expand, Portal, ...widgetArray]) => {
-    const params = new URLSearchParams(window.location.search.toLowerCase());
-    let map;
-    const webSceneId = websceneid || params.get("websceneid");
-    if (webSceneId) {
-      const portalItem = {
-        id: webSceneId,
-      };
-
-      if (webSceneId.startsWith("http")) {
-        const parts = webSceneId.split("/");
-        portalItem.id = parts.pop();
-        const portalUrl = parts.join("/");
-        const portal = new Portal({
-          url: portalUrl,
+  ).then(
+    ([
+      IdentityManager,
+      WebScene,
+      SceneView,
+      Expand,
+      Portal,
+      ...widgetArray
+    ]) => {
+      if (window.ARCGIS_TOKEN) {
+        IdentityManager.registerToken({
+          server: window.ARCGIS_SERVER,
+          token: window.ARCGIS_TOKEN,
         });
-        portalItem.portal = portal;
+      }
+      const params = new URLSearchParams(window.location.search.toLowerCase());
+      let map;
+      const webSceneId = websceneid || params.get("websceneid");
+      if (webSceneId) {
+        const portalItem = {
+          id: webSceneId,
+        };
+
+        if (webSceneId.startsWith("http")) {
+          const parts = webSceneId.split("/");
+          portalItem.id = parts.pop();
+          const portalUrl = parts.join("/");
+          const portal = new Portal({
+            url: portalUrl,
+          });
+          portalItem.portal = portal;
+        }
+
+        map = new WebScene({
+          portalItem,
+        });
+      } else {
+        map = new WebScene({
+          basemap: "satellite",
+          ground: "world-elevation",
+        });
       }
 
-      map = new WebScene({
-        portalItem,
-      });
-    } else {
-      map = new WebScene({
-        basemap: "satellite",
-        ground: "world-elevation",
-      });
-    }
-
-    view = new SceneView({
-      container: node,
-      map: map,
-      ui: {
-        components: ["attribution"],
-      },
-    });
-
-        const connector = document.getElementsByTagName(
-      "geocam-viewer-arcgis-scene"
-    )[0];
-    if (connector && connector.link) {
-      console.log("map linking to connector", view);
-      connector.link(view);
-    }
-
-    const destructureLayers = function (obj) {
-      return obj.layers.items.map((l) => {
-        return l.layers ? destructureLayers(l) : l;
-      });
-    };
-
-    const ungroupLayers = function (obj) {
-      return destructureLayers(obj).flat();
-    };
-
-    view.when(async () => {
-      let allLayers = [];
-      let hasEditableLayers = false;
-      const layers = ungroupLayers(view.map);
-      for (let i = 0; i < layers.length; i++) {
-        const layer = layers[i];
-        await view.whenLayerView(layer);
-        if (layer.editingEnabled) hasEditableLayers = true;
-        if (layer.fields) {
-          const fieldNames = layer.fields.map((f) => f.name);
-          allLayers.push({ layer, searchFields: fieldNames });
-        }
-      }
-
-      const allWidgets = [];
-
-      widgetList.forEach((w, i) => {
-        const loadedWidget = widgetArray[i];
-        const widget = new loadedWidget({
-          view: view,
-          container: document.createElement("div"),
-          ...widgets[i].options,
-        });
-        allWidgets.push(widget);
-      });
-
-      expandList.forEach((w, i) => {
-        if (w === "esri/widgets/Editor" && !hasEditableLayers) return;
-        if (w === "esri/widgets/Search") {
-          expands[i].options = expands[i].options || {};
-          expands[i].options.sources = expands[i].options.sources || allLayers;
-        }
-        const loadedWidget = widgetArray[i + widgetList.length];
-        const widget = new loadedWidget({
-          view: view,
-          container: document.createElement("div"),
-          ...expands[i].options,
-        });
-        console.log("loaded widget", {
-          view: view,
-          container: document.createElement("div"),
-          ...expands[i].options,
-        });
-        const expand = new Expand({
-          view: view,
-          group: "expands",
-          autoCollapse: true,
-          content: widget,
-          expandIconClass: expands[i].icon,
-        });
-        if (expands[i].watchWidgetFor) {
-          Object.keys(expands[i].watchWidgetFor).forEach((prop) => {
-            // for some reason widget is null here even if assign to temp var so using this doesn't work
-            widget.watch(prop, (...args) =>
-              expands[i].watchWidgetFor[prop].apply(widget, args)
-            );
+      map
+        .load()
+        .then(() => {
+          view = new SceneView({
+            container: node,
+            map: map,
+            ui: {
+              components: ["attribution"],
+            },
           });
-        }
-        if (expands[i].watchExpandFor) {
-          Object.keys(expands[i].watchExpandFor).forEach((prop) => {
-            // for some reason widget is null here even if assign to temp var so using this doesn't work
-            expand.watch(prop, (...args) =>
-              expands[i].watchExpandFor[prop].apply(expand, args)
-            );
-          });
-        }
-        // expand.watch("expanded", setActiveExpand);
-        allWidgets.push(expand);
-      });
 
-      view.ui.add(allWidgets, "top-right");
-      console.log("All widgets added");
-    });
-  });
+          const connector = document.getElementsByTagName(
+            "geocam-viewer-arcgis-scene"
+          )[0];
+          if (connector && connector.link) {
+            console.log("map linking to connector", view);
+            connector.link(view);
+          }
+
+          const destructureLayers = function (obj) {
+            return obj.layers.items.map((l) => {
+              return l.layers ? destructureLayers(l) : l;
+            });
+          };
+
+          const ungroupLayers = function (obj) {
+            return destructureLayers(obj).flat();
+          };
+
+          view.when(async () => {
+            let allLayers = [];
+            let hasEditableLayers = false;
+            const layers = ungroupLayers(view.map);
+            for (let i = 0; i < layers.length; i++) {
+              const layer = layers[i];
+              await view.whenLayerView(layer);
+              if (layer.editingEnabled) hasEditableLayers = true;
+              if (layer.fields) {
+                const fieldNames = layer.fields.map((f) => f.name);
+                allLayers.push({ layer, searchFields: fieldNames });
+              }
+            }
+
+            const allWidgets = [];
+
+            widgetList.forEach((w, i) => {
+              const loadedWidget = widgetArray[i];
+              const widget = new loadedWidget({
+                view: view,
+                container: document.createElement("div"),
+                ...widgets[i].options,
+              });
+              allWidgets.push(widget);
+            });
+
+            expandList.forEach((w, i) => {
+              if (w === "esri/widgets/Editor" && !hasEditableLayers) return;
+              if (w === "esri/widgets/Search") {
+                expands[i].options = expands[i].options || {};
+                expands[i].options.sources =
+                  expands[i].options.sources || allLayers;
+              }
+              const loadedWidget = widgetArray[i + widgetList.length];
+              const widget = new loadedWidget({
+                view: view,
+                container: document.createElement("div"),
+                ...expands[i].options,
+              });
+              console.log("loaded widget", {
+                view: view,
+                container: document.createElement("div"),
+                ...expands[i].options,
+              });
+              const expand = new Expand({
+                view: view,
+                group: "expands",
+                autoCollapse: true,
+                content: widget,
+                expandIconClass: expands[i].icon,
+              });
+              if (expands[i].watchWidgetFor) {
+                Object.keys(expands[i].watchWidgetFor).forEach((prop) => {
+                  // for some reason widget is null here even if assign to temp var so using this doesn't work
+                  widget.watch(prop, (...args) =>
+                    expands[i].watchWidgetFor[prop].apply(widget, args)
+                  );
+                });
+              }
+              if (expands[i].watchExpandFor) {
+                Object.keys(expands[i].watchExpandFor).forEach((prop) => {
+                  // for some reason widget is null here even if assign to temp var so using this doesn't work
+                  expand.watch(prop, (...args) =>
+                    expands[i].watchExpandFor[prop].apply(expand, args)
+                  );
+                });
+              }
+              // expand.watch("expanded", setActiveExpand);
+              allWidgets.push(expand);
+            });
+
+            view.ui.add(allWidgets, "top-right");
+            console.log("All widgets added");
+          });
+        })
+        .catch((error) => {
+          const msg =
+            error && error.message
+              ? error?.message + "\n" + error?.details?.error?.message
+              : "An unknown erro occurred trying to load the map.";
+          alert(msg);
+          console.error("Error loading scene:", msg);
+        });
+    }
+  );
 
   return view;
 }
