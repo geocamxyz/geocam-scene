@@ -17,9 +17,9 @@ function M(e) {
 }
 function V(e) {
   e === void 0 && (e = W);
-  var n = M(e), a = G(e);
-  if (a !== A && a.major === 3) {
-    var t = a.minor <= 10 ? "js/" : "";
+  var n = M(e), o = G(e);
+  if (o !== A && o.major === 3) {
+    var t = o.minor <= 10 ? "js/" : "";
     return "".concat(n).concat(t, "esri/css/esri.css");
   } else
     return "".concat(n, "esri/themes/light/main.css");
@@ -30,8 +30,8 @@ function j(e) {
 }
 function H(e, n) {
   if (n) {
-    var a = document.querySelector(n);
-    a.parentNode.insertBefore(e, a);
+    var o = document.querySelector(n);
+    o.parentNode.insertBefore(e, o);
   } else
     document.head.appendChild(e);
 }
@@ -42,27 +42,27 @@ function K(e) {
   return !e || G(e) ? V(e) : e;
 }
 function $(e, n) {
-  var a = K(e), t = J(a);
-  return t || (t = j(a), H(t, n)), t;
+  var o = K(e), t = J(o);
+  return t || (t = j(o), H(t, n)), t;
 }
 var X = {};
 function Z(e) {
   var n = document.createElement("script");
   return n.type = "text/javascript", n.src = e, n.setAttribute("data-esri-loader", "loading"), n;
 }
-function T(e, n, a) {
+function T(e, n, o) {
   var t;
-  a && (t = _(e, a));
+  o && (t = _(e, o));
   var s = function() {
     n(e), e.removeEventListener("load", s, !1), t && e.removeEventListener("error", t, !1);
   };
   e.addEventListener("load", s, !1);
 }
 function _(e, n) {
-  var a = function(t) {
-    n(t.error || new Error("There was an error attempting to load ".concat(e.src))), e.removeEventListener("error", a, !1);
+  var o = function(t) {
+    n(t.error || new Error("There was an error attempting to load ".concat(e.src))), e.removeEventListener("error", o, !1);
   };
-  return e.addEventListener("error", a, !1), a;
+  return e.addEventListener("error", o, !1), o;
 }
 function U() {
   return document.querySelector("script[data-esri-loader]");
@@ -78,29 +78,29 @@ function z(e) {
     for (var r in s)
       Object.prototype.hasOwnProperty.call(s, r) && (n[r] = s[r]);
   });
-  var a = n.version, t = n.url || M(a);
+  var o = n.version, t = n.url || M(o);
   return new R.Promise(function(s, r) {
-    var d = U();
-    if (d) {
-      var v = d.getAttribute("src");
-      v !== t ? r(new Error("The ArcGIS API for JavaScript is already loaded (".concat(v, ")."))) : I() ? s(d) : T(d, s, r);
+    var c = U();
+    if (c) {
+      var h = c.getAttribute("src");
+      h !== t ? r(new Error("The ArcGIS API for JavaScript is already loaded (".concat(h, ")."))) : I() ? s(c) : T(c, s, r);
     } else if (I())
       r(new Error("The ArcGIS API for JavaScript is already loaded."));
     else {
       var i = n.css;
       if (i) {
         var f = i === !0;
-        $(f ? a : i, n.insertCssBefore);
+        $(f ? o : i, n.insertCssBefore);
       }
-      d = Z(t), T(d, function() {
-        d.setAttribute("data-esri-loader", "loaded"), s(d);
-      }, r), document.body.appendChild(d);
+      c = Z(t), T(c, function() {
+        c.setAttribute("data-esri-loader", "loaded"), s(c);
+      }, r), document.body.appendChild(c);
     }
   });
 }
 function q(e) {
-  return new R.Promise(function(n, a) {
-    var t = window.require.on("error", a);
+  return new R.Promise(function(n, o) {
+    var t = window.require.on("error", o);
     window.require(e, function() {
       for (var s = [], r = 0; r < arguments.length; r++)
         s[r] = arguments[r];
@@ -111,13 +111,13 @@ function q(e) {
 function O(e, n) {
   if (n === void 0 && (n = {}), I())
     return q(e);
-  var a = U(), t = a && a.getAttribute("src");
+  var o = U(), t = o && o.getAttribute("src");
   return !n.url && t && (n.url = t), z(n).then(function() {
     return q(e);
   });
 }
 async function Q(e, n) {
-  const a = {
+  const o = {
     version: "4.27",
     css: !0
   };
@@ -136,17 +136,17 @@ async function Q(e, n) {
       name: "DirectLineMeasurement3D",
       icon: "esri-icon-measure",
       watchExpandFor: {
-        expanded: (i, f, C, m) => {
+        expanded: (i, f, S, m) => {
           m.content.viewModel.clear();
         }
       },
       watchWidgetFor: {
-        "viewModel.state": (i, f, C, m) => {
+        "viewModel.state": (i, f, S, m) => {
           i === "measuring" ? m.view.emit("clickable", !1) : i !== "measuring" && f === "measuring" && m.view.emit("clickable", !0), console.log("viewmodel state change", i, m);
         }
       }
     }
-  ], d = s ? s.map((i) => i.class ? i.class : `esri/widgets/${i.name}`) : [], v = r ? r.map((i) => i.class ? i.class : `esri/widgets/${i.name}`) : [];
+  ], c = s ? s.map((i) => i.class ? i.class : `esri/widgets/${i.name}`) : [], h = r ? r.map((i) => i.class ? i.class : `esri/widgets/${i.name}`) : [];
   return await O(
     [
       "esri/identity/IdentityManager",
@@ -154,13 +154,13 @@ async function Q(e, n) {
       "esri/views/SceneView",
       "esri/widgets/Expand",
       "esri/portal/Portal"
-    ].concat(d).concat(v),
-    a
+    ].concat(c).concat(h),
+    o
   ).then(
     ([
       i,
       f,
-      C,
+      S,
       m,
       N,
       ...P
@@ -170,102 +170,100 @@ async function Q(e, n) {
         token: window.ARCGIS_TOKEN
       });
       const B = new URLSearchParams(window.location.search.toLowerCase());
-      let L;
-      const S = n || B.get("websceneid");
-      if (S) {
-        const c = {
-          id: S
+      let y;
+      const L = n || B.get("websceneid");
+      if (L) {
+        const d = {
+          id: L
         };
-        if (S.startsWith("http")) {
-          const u = S.split("/");
-          c.id = u.pop();
-          const p = u.join("/"), l = new N({
-            url: p
+        if (L.startsWith("http")) {
+          const l = L.split("/");
+          d.id = l.pop();
+          const C = l.join("/"), u = new N({
+            url: C
           });
-          c.portal = l;
+          d.portal = u;
         }
-        L = new f({
-          portalItem: c
+        y = new f({
+          portalItem: d
         });
       } else
-        L = new f({
+        y = new f({
           basemap: "satellite",
           ground: "world-elevation"
         });
-      L.load().then(() => {
-        t = new C({
+      y.load().then(() => {
+        t = new S({
           container: e,
-          map: L,
+          map: y,
           ui: {
             components: ["attribution"]
           }
         });
-        const c = document.getElementsByTagName(
+        const d = document.getElementsByTagName(
           "geocam-viewer-arcgis-scene"
         )[0];
-        c && c.link && (console.log("map linking to connector", t), c.link(t));
-        const u = function(l) {
-          return l.layers.items.map((h) => h.layers ? u(h) : h);
-        }, p = function(l) {
-          return u(l).flat();
+        d && d.link && (console.log("map linking to connector", t), d.link(t));
+        const l = function(u) {
+          return u.layers.items.map((p) => p.layers ? l(p) : p);
+        }, C = function(u) {
+          return l(u).flat();
         };
         t.when(async () => {
-          let l = [], h = !1;
-          const F = p(t.map);
+          let u = [], p = !1;
+          const F = C(t.map);
           for (let w = 0; w < F.length; w++) {
-            const o = F[w];
-            if (await t.whenLayerView(o), o.editingEnabled && (h = !0), o.fields) {
-              const E = o.fields.map((g) => g.name);
-              l.push({ layer: o, searchFields: E });
+            const a = F[w];
+            if (await t.whenLayerView(a), a.editingEnabled && (p = !0), a.fields) {
+              const v = a.fields.map((g) => g.name);
+              u.push({ layer: a, searchFields: v });
             }
           }
           const b = [];
-          d.forEach((w, o) => {
-            const E = P[o], g = new E({
+          c.forEach((w, a) => {
+            const v = P[a], g = new v({
               view: t,
               container: document.createElement("div"),
-              ...s[o].options
+              ...s[a].options
             });
             b.push(g);
-          }), v.forEach((w, o) => {
-            if (w === "esri/widgets/Editor" && !h)
-              return;
-            w === "esri/widgets/Search" && (r[o].options = r[o].options || {}, r[o].options.sources = r[o].options.sources || l);
-            const E = P[o + d.length], g = new E({
+          }), h.forEach((w, a) => {
+            if (w === "esri/widgets/Editor" && !p) return;
+            w === "esri/widgets/Search" && (r[a].options = r[a].options || {}, r[a].options.sources = r[a].options.sources || u);
+            const v = P[a + c.length], g = new v({
               view: t,
               container: document.createElement("div"),
-              ...r[o].options
+              ...r[a].options
             });
             console.log("loaded widget", {
               view: t,
               container: document.createElement("div"),
-              ...r[o].options
+              ...r[a].options
             });
             const k = new m({
               view: t,
               group: "expands",
               autoCollapse: !0,
               content: g,
-              expandIconClass: r[o].icon
+              expandIconClass: r[a].icon
             });
-            r[o].watchWidgetFor && Object.keys(r[o].watchWidgetFor).forEach((y) => {
+            r[a].watchWidgetFor && Object.keys(r[a].watchWidgetFor).forEach((E) => {
               g.watch(
-                y,
-                (...x) => r[o].watchWidgetFor[y].apply(g, x)
+                E,
+                (...x) => r[a].watchWidgetFor[E].apply(g, x)
               );
-            }), r[o].watchExpandFor && Object.keys(r[o].watchExpandFor).forEach((y) => {
+            }), r[a].watchExpandFor && Object.keys(r[a].watchExpandFor).forEach((E) => {
               k.watch(
-                y,
-                (...x) => r[o].watchExpandFor[y].apply(k, x)
+                E,
+                (...x) => r[a].watchExpandFor[E].apply(k, x)
               );
             }), b.push(k);
           }), t.ui.add(b, "top-right"), console.log("All widgets added");
         });
-      }).catch((c) => {
-        var p, l;
-        const u = c && c.message ? (c == null ? void 0 : c.message) + `
-` + ((l = (p = c == null ? void 0 : c.details) == null ? void 0 : p.error) == null ? void 0 : l.message) : "An unknown erro occurred trying to load the map.";
-        alert(u), console.error("Error loading scene:", u);
+      }).catch((d) => {
+        const l = d && d.message ? d?.message + `
+` + d?.details?.error?.message : "An unknown erro occurred trying to load the map.";
+        alert(l), console.error("Error loading scene:", l);
       });
     }
   ), t;
@@ -276,8 +274,8 @@ class Y extends HTMLElement {
   }
   connectedCallback() {
     console.log("Scene connected");
-    const n = this, a = n.getAttribute("data-websceneid");
-    Q(n, a);
+    const n = this, o = n.getAttribute("data-websceneid");
+    Q(n, o);
   }
   disconnectedCallback() {
     console.log("Scene disconnected");
