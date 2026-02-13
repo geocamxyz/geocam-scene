@@ -1,0 +1,19 @@
+{
+  "name": "geocam-scene",
+  "private": true,
+<<<<<<< HEAD
+  "version": "2.4.0rc2",
+=======
+  "version": "2.4.0rc3",
+>>>>>>> 54153463998d6173dc147ab6a4ba84a5a2400978
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^4.0.4"
+  },
+  "dependencies": {
+    "esri-loader": "^3.7.0"
+  }
+}
