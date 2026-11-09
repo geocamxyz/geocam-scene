@@ -1,7 +1,7 @@
 {
   "name": "geocam-scene",
   "private": true,
-  "version": "2.4.12",
+  "version": "2.4.16",
   "type": "module",
   "scripts": {
     "build": "vite build"
