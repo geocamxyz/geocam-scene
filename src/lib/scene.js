@@ -1,5 +1,65 @@
 import { loadModules } from "esri-loader";
 
+// --- ArcGIS identity (geocamxyz/geocam-viewer-development#8) ------------------
+//
+// Three layers, each silent until the last:
+//
+//   1. A token handed in by the Manager — the user signed into GeoCam with
+//      Sign in with ArcGIS. Registered before anything loads, so they never see
+//      a popup. Unchanged behaviour.
+//   2. No token: register an OAuthInfo and ask, silently, whether this browser
+//      already has an ArcGIS session. checkSignInStatus never prompts — it
+//      resolves if signed in and rejects in milliseconds if not. This is what
+//      lets a second map, or a scene after a map, open without asking again.
+//   3. Nothing else. The Maps SDK raises its own challenge if and only if a
+//      request comes back 499/498/403/401 (esri/request.js). A public item never
+//      does, so a public map still opens with no popup for anyone, and a wrong
+//      item id fails cleanly instead of demanding a sign-in.
+//
+// The point of registering the OAuthInfo is that when step 3 does fire, the
+// challenge becomes an ArcGIS OAuth popup instead of the SDK's built-in
+// username/password dialog — which enterprise/Entra orgs cannot use at all.
+const setupArcgisIdentity = async function (IdentityManager, OAuthInfo) {
+  if (window.ARCGIS_TOKEN) {
+    IdentityManager.registerToken({
+      server: window.ARCGIS_SERVER,
+      token: window.ARCGIS_TOKEN,
+    });
+    return;
+  }
+
+  if (!window.ARCGIS_APP_ID) return; // nothing to register; SDK default applies
+
+  // Without a callback on this origin the popup cannot hand its result back, and
+  // Esri's relative default would resolve under /viewer/scene/cell+{slug}/ and
+  // never match the redirect URI registered on the app. Better to leave the old
+  // behaviour in place than to open a popup that cannot return.
+  if (!window.ARCGIS_OAUTH_CALLBACK) {
+    console.warn(
+      "ARCGIS_APP_ID is set but ARCGIS_OAUTH_CALLBACK is not — skipping ArcGIS OAuth setup"
+    );
+    return;
+  }
+
+  const portalUrl =
+    window.ARCGIS_PORTAL_URL || window.ARCGIS_SERVER || "https://www.arcgis.com";
+
+  try {
+    IdentityManager.registerOAuthInfos([
+      new OAuthInfo({
+        appId: window.ARCGIS_APP_ID,
+        portalUrl: portalUrl,
+        popup: true,
+        popupCallbackUrl: window.ARCGIS_OAUTH_CALLBACK,
+      }),
+    ]);
+    await IdentityManager.checkSignInStatus(`${portalUrl}/sharing`);
+  } catch (e) {
+    // No existing session, or registration failed. Neither is an error: carry on
+    // and let the SDK challenge only if the item actually needs credentials.
+  }
+};
+
 export async function scene(node, websceneid) {
   const esriLoaderOptions = {
     version: "4.27",
@@ -50,6 +110,7 @@ export async function scene(node, websceneid) {
   await loadModules(
     [
       "esri/identity/IdentityManager",
+      "esri/identity/OAuthInfo",
       "esri/WebScene",
       "esri/views/SceneView",
       "esri/widgets/Expand",
@@ -59,20 +120,16 @@ export async function scene(node, websceneid) {
       .concat(expandList),
     esriLoaderOptions
   ).then(
-    ([
+    async ([
       IdentityManager,
+      OAuthInfo,
       WebScene,
       SceneView,
       Expand,
       Portal,
       ...widgetArray
     ]) => {
-      if (window.ARCGIS_TOKEN) {
-        IdentityManager.registerToken({
-          server: window.ARCGIS_SERVER,
-          token: window.ARCGIS_TOKEN,
-        });
-      }
+      await setupArcgisIdentity(IdentityManager, OAuthInfo);
       const params = new URLSearchParams(window.location.search.toLowerCase());
       let map;
       const webSceneId = websceneid || params.get("websceneid");

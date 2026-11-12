@@ -83,3 +83,70 @@ jobs:
               target_commitish: context.sha
             });
           result-encoding: string
+
+      # jsDelivr serves `@latest` through a mutable alias whose FILE cache does not
+      # follow a new tag by itself. Twice now a correct release has sat invisible
+      # behind stale bytes — the resolver API reported the new version while the CDN
+      # kept returning the previous build, so a shipped fix never reached any viewer.
+      # Purging the alias for each published file is what actually makes a release
+      # live. Stable only: `@latest` does not move for a preview build.
+      - name: Purge jsDelivr @latest cache
+        if: steps.check_tag.outputs.exists == 'false' && steps.classify.outputs.MAKE_LATEST == 'true'
+        run: |
+          set -uo pipefail
+          TAG="${{ steps.classify.outputs.TAG }}"
+
+          if [ ! -d dist ]; then
+            echo "No dist/ directory — nothing to purge."
+            exit 0
+          fi
+
+          mapfile -t FILES < <(find dist -type f \
+            \( -name '*.js' -o -name '*.cjs' -o -name '*.mjs' -o -name '*.css' -o -name '*.map' \) \
+            | sort)
+
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No publishable files under dist/ — nothing to purge."
+            exit 0
+          fi
+
+          # Give jsDelivr a moment to notice the tag the previous step just created,
+          # so the purge does not simply re-cache the old build.
+          sleep 15
+
+          for f in "${FILES[@]}"; do
+            echo "Purging /gh/${GITHUB_REPOSITORY}@latest/${f}"
+            curl -fsS -m 60 "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@latest/${f}" > /dev/null \
+              || echo "::warning::Purge request failed for ${f}"
+          done
+
+          # Confirm the alias now serves the build we just tagged. Retried, because
+          # propagation is not instant; failed rather than warned, because a release
+          # that never reaches users is not a success and a warning in a green build
+          # is exactly how this went unnoticed before.
+          stale=""
+          for attempt in 1 2 3; do
+            stale=""
+            for f in "${FILES[@]}"; do
+              latest=$(curl -sL -m 60 -o /dev/null -w '%{size_download}' \
+                "https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@latest/${f}")
+              tagged=$(curl -sL -m 60 -o /dev/null -w '%{size_download}' \
+                "https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${TAG}/${f}")
+              if [ "$latest" != "$tagged" ]; then
+                stale="${stale} ${f} (@latest ${latest}B vs @${TAG} ${tagged}B)"
+              fi
+            done
+            [ -z "$stale" ] && break
+            echo "Attempt ${attempt}: still stale —${stale}"
+            [ "$attempt" -lt 3 ] && sleep 20
+          done
+
+          if [ -n "$stale" ]; then
+            echo "::error::@latest still serving stale content after purge:${stale}"
+            echo "### jsDelivr purge FAILED" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`@latest\` is still serving the previous build for:${stale}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "### jsDelivr \`@latest\` purged and verified for ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' "${FILES[@]}" | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
